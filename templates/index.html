@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Job Aggregator{% endblock %}
+
+{% block content %}
+<div class="search-section">
+    <h1 class="text-center mb-4">🔍 Job Information Retrieval System</h1>
+    <p class="text-center text-muted mb-4">
+        Information Retrieval and Analysis Platform for Software Development Jobs in Germany
+    </p>
+    
+    <form action="/search" method="get" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <input 
+                    type="text" 
+                    class="form-control form-control-lg" 
+                    name="q" 
+                    placeholder="Enter search keywords, e.g., Python developer, Java backend..."
+                    value="{{ query if query else '' }}"
+                >
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    🔍 Search
+                </button>
+            </div>
+        </div>
+        
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <select class="form-select" name="location">
+                    <option value="">All Locations</option>
+                    <option value="Germany" selected>Germany</option>
+                    <option value="Berlin">Berlin</option>
+                    <option value="Munich">Munich</option>
+                    <option value="Remote">Remote</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <select class="form-select" name="sort">
+                    <option value="relevance" selected>Relevance</option>
+                    <option value="date">Latest</option>
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <div class="alert alert-info">
+        <h5>📋 Project Overview</h5>
+        <ul class="mb-0">
+            <li><strong>Information Retrieval</strong>: Inverted index, TF-IDF ranking, BM25 algorithm</li>
+            <li><strong>Parallel Computing</strong>: Multi-process text processing, Spark distributed analysis</li>
+            <li><strong>Data Analysis</strong>: Skill trends, job distribution visualization</li>
+        </ul>
+    </div>
+
+    <div class="alert alert-warning">
+        <strong>⚠️ Current Status</strong>: System under development, search functionality coming soon...
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📊 Dataset</h5>
+                <p class="card-text">Software development job data collected from multiple job sites</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">🔍 Information Retrieval</h5>
+                <p class="card-text">Inverted index, TF-IDF, BM25 ranking algorithms</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">⚡ Parallel Computing</h5>
+                <p class="card-text">Multi-process processing, Spark distributed analysis</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

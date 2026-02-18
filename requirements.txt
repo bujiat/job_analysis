@@ -1,0 +1,13 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Template engine
+jinja2==3.1.2
+
+# HTTP requests (for data collection later)
+requests==2.31.0
+
+# WSGI adapter (for PythonAnywhere deployment)
+gunicorn==21.2.0
+
