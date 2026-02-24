@@ -5,6 +5,8 @@ jinja2==3.1.2
 requests==2.31.0
 pydantic==2.12.5
 nltk>=3.8
+scipy>=1.10
 rank-bm25>=0.2.2
 gunicorn==21.2.0
 asgiref==3.7.0
+a2wsgi>=0.9.0

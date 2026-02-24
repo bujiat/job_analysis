@@ -26,7 +26,8 @@ env/
 ENV/
 .venv
 
-# IDE
+# IDE / Editor
+.cursor/
 .vscode/
 .idea/
 *.swp
@@ -38,10 +39,10 @@ ENV/
 .env.local
 
 # 数据文件（大文件）
-data/raw/*.json
-data/raw/*.jsonl
-data/normalized/*.json
-data/normalized/*.jsonl
+# data/raw/*.json
+# data/raw/*.jsonl
+# data/normalized/*.json
+# data/normalized/*.jsonl
 
 # 日志
 *.log
