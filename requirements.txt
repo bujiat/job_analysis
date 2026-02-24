@@ -1,13 +1,10 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-
-# Template engine
 jinja2==3.1.2
-
-# HTTP requests (for data collection later)
 requests==2.31.0
-
-# WSGI adapter (for PythonAnywhere deployment)
+pydantic==2.12.5
+nltk>=3.8
+rank-bm25>=0.2.2
 gunicorn==21.2.0
-
+asgiref==3.7.0

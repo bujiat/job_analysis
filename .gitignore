@@ -62,4 +62,5 @@ htmlcov/
 tests/
 docs/
 pythonanywhere_wsgi_config.py
+wsgi.py
 readme.md

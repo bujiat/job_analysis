@@ -2,89 +2,344 @@
 
 {% block title %}Home - Job Aggregator{% endblock %}
 
+{% block extra_css %}
+<style>
+    .job-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .job-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .job-title {
+        font-size: 1.3em;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    .job-company {
+        color: #7f8c8d;
+        font-size: 1.1em;
+        margin-bottom: 8px;
+    }
+    .job-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 10px;
+        font-size: 0.9em;
+        color: #555;
+    }
+    .job-tags {
+        margin-top: 10px;
+    }
+    .job-tag {
+        display: inline-block;
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    .job-snippet {
+        margin-top: 10px;
+        font-size: 0.9em;
+        color: #555;
+        line-height: 1.5;
+    }
+    .job-snippet mark {
+        background: #fff3cd;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+    .loading-spinner {
+        text-align: center;
+        padding: 20px;
+        display: none;
+    }
+    .no-more-jobs {
+        text-align: center;
+        padding: 20px;
+        color: #999;
+        display: none;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="search-section">
     <h1 class="text-center mb-4">🔍 Job Information Retrieval System</h1>
     <p class="text-center text-muted mb-4">
-        Information Retrieval and Analysis Platform for Software Development Jobs in Germany
+        Information Retrieval and Analysis Platform
     </p>
-    
-    <form action="/search" method="get" class="mb-4">
-        <div class="row g-3">
-            <div class="col-md-8">
-                <input 
-                    type="text" 
-                    class="form-control form-control-lg" 
-                    name="q" 
-                    placeholder="Enter search keywords, e.g., Python developer, Java backend..."
-                    value="{{ query if query else '' }}"
-                >
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary btn-lg w-100">
-                    🔍 Search
-                </button>
+    <div class="row justify-content-center mb-3">
+        <div class="col-md-8">
+            <div class="input-group">
+                <input type="text" id="search-input" class="form-control" placeholder="Search jobs (e.g. python, developer, backend)" aria-label="Search query">
+                <button class="btn btn-primary" type="button" id="search-btn">Search</button>
             </div>
         </div>
+    </div>
+</div>
+
+<template id="job-card-tpl">
+    <div class="job-card">
+        <div class="job-title"></div>
+        <div class="job-company"></div>
+        <div class="job-meta">
+            <span class="job-meta-location"></span>
+            <span class="job-meta-remote badge bg-success" style="display:none">Remote</span>
+            <span class="job-meta-types badge bg-info" style="display:none"></span>
+            <span class="job-meta-date"></span>
+        </div>
+        <div class="job-tags"></div>
+        <div class="job-snippet" style="display:none;"></div>
+    </div>
+</template>
+
+<div id="job-list-container">
+    <!-- Jobs will be loaded here -->
+</div>
+
+<div class="loading-spinner" id="loading">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading more jobs...</p>
+</div>
+
+<div class="no-more-jobs" id="no-more">
+    <p>No more jobs to load</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let skip = 0;
+    const limit = 50;
+    let loading = false;
+    let hasMore = true;
+    let isSearchMode = false;
+    let searchSkip = 0;
+    let searchHasMore = true;
+    let searchLoading = false;
+    let lastSearchQuery = '';
+
+    async function loadJobs() {
+        if (loading || !hasMore || isSearchMode) return;
         
-        <div class="row g-3 mt-2">
-            <div class="col-md-6">
-                <select class="form-select" name="location">
-                    <option value="">All Locations</option>
-                    <option value="Germany" selected>Germany</option>
-                    <option value="Berlin">Berlin</option>
-                    <option value="Munich">Munich</option>
-                    <option value="Remote">Remote</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <select class="form-select" name="sort">
-                    <option value="relevance" selected>Relevance</option>
-                    <option value="date">Latest</option>
-                </select>
-            </div>
-        </div>
-    </form>
+        loading = true;
+        document.getElementById('loading').style.display = 'block';
+        
+        try {
+            const response = await fetch(`/api/jobs/?skip=${skip}&limit=${limit}`);
+            const jobs = await response.json();
+            
+            if (jobs.length === 0) {
+                hasMore = false;
+                document.getElementById('no-more').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                loading = false;
+                return;
+            }
+            
+            const container = document.getElementById('job-list-container');
+            
+            jobs.forEach(job => {
+                const card = createJobCard(job);
+                container.appendChild(card);
+            });
+            
+            skip += jobs.length;
+            
+            if (jobs.length < limit) {
+                hasMore = false;
+                document.getElementById('no-more').style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading jobs:', error);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+            loading = false;
+        }
+    }
+    
+    function stripHtmlAndTruncate(text, maxLen) {
+        if (!text) return '';
+        const stripped = String(text).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (stripped.length <= maxLen) return stripped;
+        return stripped.slice(0, maxLen) + '…';
+    }
 
-    <div class="alert alert-info">
-        <h5>📋 Project Overview</h5>
-        <ul class="mb-0">
-            <li><strong>Information Retrieval</strong>: Inverted index, TF-IDF ranking, BM25 algorithm</li>
-            <li><strong>Parallel Computing</strong>: Multi-process text processing, Spark distributed analysis</li>
-            <li><strong>Data Analysis</strong>: Skill trends, job distribution visualization</li>
-        </ul>
-    </div>
+    function createJobCard(job, snippet) {
+        const tpl = document.getElementById('job-card-tpl');
+        const card = tpl.content.cloneNode(true);
+        const root = card.querySelector('.job-card');
+        root.dataset.jobId = job.job_id;
+        root.onclick = () => {
+            const q = document.getElementById('search-input').value.trim();
+            if (q) sessionStorage.setItem('jobSearchQuery', q);
+            window.location.href = '/job/' + encodeURIComponent(job.job_id);
+        };
 
-    <div class="alert alert-warning">
-        <strong>⚠️ Current Status</strong>: System under development, search functionality coming soon...
-    </div>
-</div>
+        root.querySelector('.job-title').textContent = job.title || '';
+        root.querySelector('.job-company').textContent = job.company_name || '';
+        root.querySelector('.job-meta-location').textContent = '📍 ' + (job.location || '');
+        root.querySelector('.job-meta-date').textContent = '📅 ' + formatDate(job.created_at);
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">📊 Dataset</h5>
-                <p class="card-text">Software development job data collected from multiple job sites</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">🔍 Information Retrieval</h5>
-                <p class="card-text">Inverted index, TF-IDF, BM25 ranking algorithms</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">⚡ Parallel Computing</h5>
-                <p class="card-text">Multi-process processing, Spark distributed analysis</p>
-            </div>
-        </div>
-    </div>
-</div>
+        const remoteEl = root.querySelector('.job-meta-remote');
+        remoteEl.style.display = job.remote ? '' : 'none';
+
+        const typesEl = root.querySelector('.job-meta-types');
+        if (job.job_types && job.job_types.length > 0) {
+            typesEl.textContent = job.job_types.join(', ');
+            typesEl.style.display = '';
+        } else {
+            typesEl.style.display = 'none';
+        }
+
+        const tagsContainer = root.querySelector('.job-tags');
+        if (job.tags && job.tags.length > 0) {
+            job.tags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'job-tag';
+                span.textContent = tag;
+                tagsContainer.appendChild(span);
+            });
+        }
+
+        const snippetEl = root.querySelector('.job-snippet');
+        if (snippet && snippet.trim()) {
+            snippetEl.innerHTML = snippet;
+            snippetEl.style.display = '';
+        } else {
+            const preview = stripHtmlAndTruncate(job.description || '', 160); // same length as snippet max_len
+            if (preview) {
+                snippetEl.textContent = preview;
+                snippetEl.style.display = '';
+            } else {
+                snippetEl.style.display = 'none';
+            }
+        }
+
+        return card;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return 'Unknown';
+        try {
+            const num = parseInt(dateStr, 10);
+            const date = !isNaN(num) && num > 0 ? new Date(num * 1000) : new Date(dateStr);
+            return isNaN(date.getTime()) ? dateStr : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch {
+            return dateStr;
+        }
+    }
+
+    async function doSearch() {
+        const q = document.getElementById('search-input').value.trim();
+        const container = document.getElementById('job-list-container');
+        const loadingEl = document.getElementById('loading');
+        const noMoreEl = document.getElementById('no-more');
+
+        if (!q) {
+            sessionStorage.removeItem('jobSearchQuery');
+            container.innerHTML = '';
+            skip = 0;
+            hasMore = true;
+            isSearchMode = false;
+            noMoreEl.style.display = 'none';
+            loadJobs();
+            return;
+        }
+
+        isSearchMode = true;
+        lastSearchQuery = q;
+        searchSkip = 0;
+        searchHasMore = true;
+        loadingEl.style.display = 'block';
+        noMoreEl.style.display = 'none';
+        try {
+            const response = await fetch('/api/jobs/search?q=' + encodeURIComponent(q) + '&skip=0&limit=' + limit);
+            const results = await response.json();
+            container.innerHTML = '';
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted py-4">No jobs match your search.</p>';
+                searchHasMore = false;
+            } else {
+                results.forEach(r => container.appendChild(createJobCard(r.job, r.snippet)));
+                searchSkip = results.length;
+                searchHasMore = results.length >= limit;
+                if (!searchHasMore) noMoreEl.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            container.innerHTML = '<p class="text-center text-danger py-4">Search failed. Please try again.</p>';
+        } finally {
+            loadingEl.style.display = 'none';
+        }
+    }
+
+    async function loadMoreSearchResults() {
+        if (searchLoading || !searchHasMore || !lastSearchQuery) return;
+        searchLoading = true;
+        document.getElementById('loading').style.display = 'block';
+        try {
+            const response = await fetch('/api/jobs/search?q=' + encodeURIComponent(lastSearchQuery) + '&skip=' + searchSkip + '&limit=' + limit);
+            const results = await response.json();
+            const container = document.getElementById('job-list-container');
+            const existingIds = new Set(Array.from(container.querySelectorAll('[data-job-id]')).map(el => el.dataset.jobId));
+            results.forEach(r => {
+                if (existingIds.has(r.job.job_id)) return;
+                existingIds.add(r.job.job_id);
+                container.appendChild(createJobCard(r.job, r.snippet));
+            });
+            searchSkip += results.length;
+            searchHasMore = results.length >= limit;
+            if (!searchHasMore) document.getElementById('no-more').style.display = 'block';
+        } catch (error) {
+            console.error('Search load more error:', error);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+            searchLoading = false;
+        }
+    }
+
+    document.getElementById('search-btn').addEventListener('click', doSearch);
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') doSearch();
+    });
+
+    // Infinite scroll: browse mode -> loadJobs; search mode -> loadMoreSearchResults
+    // "Near bottom" = viewport bottom within 500px of document bottom (trigger early so next batch loads in time)
+    window.addEventListener('scroll', () => {
+        const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 500;
+        if (!nearBottom) return;
+        if (isSearchMode) {
+            loadMoreSearchResults();
+        } else {
+            loadJobs();
+        }
+    });
+
+    // Initial load: if we returned from detail with a search query, show search results
+    (function init() {
+        const savedQ = sessionStorage.getItem('jobSearchQuery');
+        if (savedQ !== null && savedQ !== '') {
+            document.getElementById('search-input').value = savedQ;
+            doSearch();
+        } else {
+            loadJobs();
+        }
+    })();
+</script>
 {% endblock %}
 
